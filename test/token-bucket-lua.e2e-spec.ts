@@ -49,14 +49,21 @@ describe('token-bucket.lua (real Redis)', () => {
     expect(ttl).toBeLessThanOrEqual(20_000); // capacity/rate * 2
   });
 
-  it('is atomic: 200 concurrent requests, capacity 100 -> exactly 100 allowed', async () => {
-    const k = key('race');
-    const results = await Promise.all(
-      Array.from({ length: 200 }, () =>
-        redis.client.tokenBucket(k, 100, 0.001, 1),
-      ),
-    );
-    expect(results.filter(([allowed]) => allowed === 1)).toHaveLength(100);
+  it('is atomic across app instances: 200 concurrent requests from 2 clients, capacity 100 -> exactly 100 allowed', async () => {
+    // a second connection stands in for a second app instance
+    const other = new RedisService();
+    if (other.client.status !== 'ready') await once(other.client, 'ready');
+    try {
+      const k = key('race');
+      const results = await Promise.all(
+        Array.from({ length: 200 }, (_, i) =>
+          (i % 2 ? other : redis).client.tokenBucket(k, 100, 0.001, 1),
+        ),
+      );
+      expect(results.filter(([allowed]) => allowed === 1)).toHaveLength(100);
+    } finally {
+      other.onModuleDestroy();
+    }
   });
 
   // Same random (gap, cost) sequence through both implementations, on the same
