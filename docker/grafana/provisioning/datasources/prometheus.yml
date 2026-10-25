@@ -5,3 +5,5 @@ datasources:
     type: prometheus
     url: http://prometheus:9090
     isDefault: true
+    jsonData:
+      timeInterval: 5s # matches the scrape interval; Grafana otherwise assumes 15s and smears rates over 60s windows

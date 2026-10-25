@@ -536,7 +536,7 @@
             "uid": "prometheus"
           },
           "expr": "nodejs_eventloop_lag_p99_seconds",
-          "legendFormat": "p99 lag"
+          "legendFormat": "{{instance}}"
         }
       ]
     },
@@ -581,7 +581,7 @@
             "uid": "prometheus"
           },
           "expr": "process_resident_memory_bytes",
-          "legendFormat": "RSS"
+          "legendFormat": "RSS {{instance}}"
         },
         {
           "refId": "B",
@@ -590,7 +590,7 @@
             "uid": "prometheus"
           },
           "expr": "nodejs_heap_size_used_bytes",
-          "legendFormat": "heap used"
+          "legendFormat": "heap {{instance}}"
         }
       ]
     },
@@ -612,11 +612,12 @@
         "defaults": {
           "unit": "short",
           "custom": {
-            "fillOpacity": 30,
+            "fillOpacity": 80,
             "lineWidth": 1,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "drawStyle": "bars"
           }
         },
         "overrides": [
@@ -699,7 +700,8 @@
             "uid": "loki"
           },
           "expr": "sum by (level) (rate({service=\"app\"} [$__auto]))",
-          "legendFormat": "{{level}}"
+          "legendFormat": "{{level}}",
+          "interval": "5s"
         }
       ]
     },
