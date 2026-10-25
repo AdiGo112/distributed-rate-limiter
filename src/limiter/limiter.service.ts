@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
 import { PLANS } from '../config/plans.js';
+import { checkDuration, decisions, redisErrors } from '../metrics/metrics.js';
 import type { CheckDto } from './dto/check.dto.js';
 
 export interface CheckResult {
@@ -28,6 +29,7 @@ export class LimiterService {
       );
     }
 
+    const endTimer = checkDuration.startTimer();
     try {
       const [allowed, tokens, retryAfterMs] =
         await this.redis.client.tokenBucket(
@@ -36,19 +38,32 @@ export class LimiterService {
           plan.refillPerSec,
           cost,
         );
-      return {
+      const result = {
         allowed: allowed === 1,
         remaining: Math.floor(Number(tokens)),
         retryAfterMs,
       };
+      decisions.inc({
+        result: result.allowed ? 'allowed' : 'denied',
+        plan: planName,
+      });
+      // debug only (LOG_LEVEL=debug): one line per request is too much at load-test volume
+      this.log.debug({ key: dto.key, plan: planName, cost, ...result });
+      return result;
     } catch (e) {
-      this.log.error(`Redis error: ${(e as Error).message}`);
+      redisErrors.inc();
+      decisions.inc({ result: 'degraded', plan: planName });
+      this.log.error(
+        `Redis error, failing ${this.failOpen ? 'open' : 'closed'}: ${(e as Error).message}`,
+      );
       return {
         allowed: this.failOpen,
         remaining: 0,
         retryAfterMs: 0,
         degraded: true,
       };
+    } finally {
+      endTimer();
     }
   }
 }

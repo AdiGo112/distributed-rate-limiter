@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { LimiterService } from '../src/limiter/limiter.service.js';
 import type { RedisService } from '../src/redis/redis.service.js';
+import { decisions, redisErrors } from '../src/metrics/metrics.js';
 
 // Stand-in for RedisService: only client.tokenBucket is used
 const fakeRedis = (tokenBucket: (...args: unknown[]) => Promise<unknown>) =>
@@ -57,5 +58,35 @@ describe('LimiterService', () => {
     await expect(
       svc.check({ key: 'u1', plan: 'free', cost: 11 }),
     ).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('LimiterService metrics', () => {
+  const count = async ({ result, plan }: { result: string; plan: string }) =>
+    (await decisions.get()).values.find(
+      (v) => v.labels.result === result && v.labels.plan === plan,
+    )?.value ?? 0;
+
+  beforeEach(() => {
+    decisions.reset();
+    redisErrors.reset();
+  });
+
+  it('counts allowed, denied and degraded decisions by plan', async () => {
+    const replies = [
+      [1, '1', 0],
+      [0, '0', 500],
+    ];
+    const ok = new LimiterService(fakeRedis(async () => replies.shift()));
+    await ok.check({ key: 'm', plan: 'pro' });
+    await ok.check({ key: 'm', plan: 'pro' });
+    await new LimiterService(
+      fakeRedis(() => Promise.reject(new Error('down'))),
+    ).check({ key: 'm' });
+
+    expect(await count({ result: 'allowed', plan: 'pro' })).toBe(1);
+    expect(await count({ result: 'denied', plan: 'pro' })).toBe(1);
+    expect(await count({ result: 'degraded', plan: 'free' })).toBe(1);
+    expect((await redisErrors.get()).values[0].value).toBe(1);
   });
 });

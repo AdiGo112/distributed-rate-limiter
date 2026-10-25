@@ -1,9 +1,11 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { LimiterModule } from './limiter/limiter.module.js';
+import { MetricsController } from './metrics/metrics.controller.js';
 
 @Module({
   imports: [LimiterModule],
+  controllers: [MetricsController],
   // registered here (not in main.ts) so tests that build AppModule get validation too
   providers: [
     {

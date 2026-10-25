@@ -53,4 +53,14 @@ describe('POST /v1/check', () => {
     await check(body).expect(400);
   });
 
+  it('GET /metrics exposes the limiter metrics in Prometheus format', async () => {
+    await check({ key: key('metrics') }).expect(200);
+    const res = await request(app.getHttpServer()).get('/metrics').expect(200);
+    expect(res.headers['content-type']).toContain('text/plain');
+    expect(res.text).toMatch(
+      /rl_decisions_total\{result="allowed",plan="free"\} \d+/,
+    );
+    expect(res.text).toContain('rl_check_duration_seconds_bucket');
+    expect(res.text).toContain('rl_redis_errors_total');
+  });
 });
