@@ -241,10 +241,3 @@ test/                  unit (*.spec.ts) and real-Redis (*.e2e-spec.ts) tests
 load/check.k6.js       demo traffic and benchmark mode
 docker/                Prometheus, Grafana (provisioned dashboard), Alloy, nginx config
 ```
-
-## Not done yet
-
-- A NestJS `@RateLimit()` decorator and guard, so other Nest apps can use this as a library
-- Changing plan limits at runtime without a redeploy
-- Authentication on `/v1/check` and `/metrics`; right now any caller can spend any key's tokens
-- Redis Cluster for more than one Redis node's worth of throughput
