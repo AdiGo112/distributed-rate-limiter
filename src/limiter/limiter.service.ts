@@ -53,7 +53,9 @@ export class LimiterService {
     } catch (e) {
       redisErrors.inc();
       decisions.inc({ result: 'degraded', plan: planName });
-      this.log.error(
+      // debug, not error: an outage would log every request. RedisService logs the
+      // outage once and rl_redis_errors_total counts each failure.
+      this.log.debug(
         `Redis error, failing ${this.failOpen ? 'open' : 'closed'}: ${(e as Error).message}`,
       );
       return {
