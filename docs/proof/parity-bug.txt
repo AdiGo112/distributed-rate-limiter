@@ -1,0 +1,34 @@
+Parity test against the ORIGINAL Lua script, which stored tokens with tostring()
+(reproduced 2026-10-26 01:34 IST by temporarily reverting the fix from commit da30754)
+
+Each failure is the first step where the Lua script and the in-memory reference disagree.
+In the diffs, '-' is the reference (TokenBucket) and '+' is the Lua script.
+
+     × matches the in-memory reference (capacity 10, rate 1) 17ms
+     × matches the in-memory reference (capacity 100, rate 20) 317ms
+     × matches the in-memory reference (capacity 7, rate 0.3) 17ms
+AssertionError: step 4, cost 4: expected { allowed: false, remaining: 1, …(1) } to deeply equal { allowed: false, remaining: 1, …(1) }
+- Expected
++ Received
+    "allowed": false,
+    "remaining": 1,
+-   "retryAfterMs": 2497,
++   "retryAfterMs": 2496,
+AssertionError: step 470, cost 5: expected { allowed: true, remaining: 87, …(1) } to deeply equal { allowed: true, remaining: 86, …(1) }
+- Expected
++ Received
+    "allowed": true,
+-   "remaining": 86,
++   "remaining": 87,
+    "retryAfterMs": 0,
+AssertionError: step 16, cost 4: expected { allowed: false, remaining: +0, …(1) } to deeply equal { allowed: false, remaining: +0, …(1) }
+- Expected
++ Received
+    "allowed": false,
+    "remaining": 0,
+-   "retryAfterMs": 11194,
++   "retryAfterMs": 11193,
+      Tests  3 failed | 1 passed | 4 skipped (8)
+
+With the fix (string.format('%.17g', tokens)) all 4 configurations match on every one of 1,000 steps:
+see tests.txt.

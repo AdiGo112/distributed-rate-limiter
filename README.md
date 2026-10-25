@@ -11,6 +11,24 @@ atomically by a Lua script**, so the answer stays correct when many app instance
 - A parity test runs the Lua script against an in-memory reference implementation; it found a precision bug ([testing](#testing))
 - Fail-open or fail-closed when Redis is down, with metrics, dashboards and logs for both
 
+![Grafana dashboard during a load test and a Redis outage](docs/img/dashboard.png)
+
+*Grafana during a real run on 3 replicas: a load staircase at 3,000 → 6,000 → 10,000 req/s (01:25–01:28), then Redis
+stopped for 20 s at 01:28:51 while traffic continued. The four tiles at the top show the value at the end of the window.*
+
+## Proof
+
+Every claim above links to the evidence behind it. All of it comes from real runs on the machine described in [benchmarks](#benchmarks).
+
+| Claim | Evidence |
+|---|---|
+| All 31 tests pass (10 unit, 21 against real Redis) | [`docs/proof/tests.txt`](docs/proof/tests.txt), full verbose output |
+| Exactly 100 of 200 concurrent requests allowed | `is atomic across app instances` in [`tests.txt`](docs/proof/tests.txt) |
+| The parity test caught a real bug | [`docs/proof/parity-bug.txt`](docs/proof/parity-bug.txt), the failing output against the old script |
+| 8,000 req/s on 1 instance, 12,000 on 3 replicas | [`docs/proof/benchmark-raw.txt`](docs/proof/benchmark-raw.txt), every k6 run with CPU samples |
+| Throughput and latency under load | [load screenshots](#under-load) |
+| Fail-open during a Redis outage, logged once per replica | [outage screenshots](#redis-outage) |
+
 ## How it works
 
 ```mermaid
@@ -60,6 +78,22 @@ the API down. `FAIL_OPEN` decides the answer:
 
 The outage is logged once when it starts and once when it ends, not once per request. Every failed check is still
 counted in `rl_redis_errors_total`.
+
+#### Redis outage
+
+Redis stopped at 01:28:51 and started again at 01:29:12, with about 400 req/s of traffic, on 3 replicas with
+`FAIL_OPEN=true`:
+
+![Decisions by result during the outage: allowed drops to zero and degraded takes its place](docs/img/outage-decisions.png)
+
+Allowed (green) falls to zero and degraded (orange) takes its place: requests keep getting answers while Redis is
+down, then return to normal as soon as it is back. Denied (red) is the few abusive keys in the traffic mix. Rates are
+averaged over 20 s, so the edges look softer than the real 21-second outage.
+
+![App logs: one "Redis unavailable" and one "Redis connected" line per replica](docs/img/outage-logs.png)
+
+Exactly one `Redis unavailable` and one `Redis connected` line **per replica** (3 of each), not one line per
+failed request. Prometheus counted 8,700 failed checks during the outage, all 8,700 answered as degraded.
 
 ## API
 
@@ -178,7 +212,20 @@ one core.
   the next step is sharding keys across Redis nodes (Redis Cluster), since each key lives in one place.
 
 Reproduce: `docker compose run --rm -e RATE=8000 k6` (add `-f docker-compose.yml -f docker-compose.scale.yml`
-before `run` for the replicas).
+before `run` for the replicas). Raw output of every run: [`docs/proof/benchmark-raw.txt`](docs/proof/benchmark-raw.txt).
+
+### Under load
+
+A separate staircase run on 3 replicas: 30 s each at 3,000, 6,000 and 10,000 req/s, on top of about 400 req/s of
+mixed demo traffic. k6 measured 2,997, 5,997 and 9,923 req/s achieved, with no failed requests.
+
+![Decisions per second climbing in steps to about 10,000](docs/img/load-throughput.png)
+
+![p50, p95 and p99 check latency rising with load, p99 peaking near 20 ms at 10,000 req/s](docs/img/load-latency.png)
+
+This graph is the **server-side** time to decide (`rl_check_duration_seconds`: validation done, Lua call to Redis
+and back). k6's numbers in the tables are end-to-end, including nginx, Docker networking and queueing in the load
+generator, which is why they are higher.
 
 ## Project layout
 

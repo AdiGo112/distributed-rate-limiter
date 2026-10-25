@@ -1,0 +1,29 @@
+Raw benchmark output, 2026-10-26 01:04-01:17 IST (the run the README tables come from)
+
+Machine: Intel Core i5-12500H (12 cores / 16 threads), 16 GB RAM, Windows 11, Docker Desktop
+Power: on AC for the whole run (checked at start and end); Windows standby events during the run: none
+Everything (k6, nginx, app replicas, Redis, Prometheus, Grafana, Loki) ran on this one laptop.
+
+Each line is one 30 s constant-arrival-rate k6 run (docker compose run --rm -e RATE=<target> k6).
+Latencies in ms. dropped = iterations k6 could not start on time (counts against the 1% bar).
+CPU = docker stats sample ~15 s into the run, 100% = one core.
+
+== 1 instance (started 01:04:13)
+warmup {"target":3000,"achieved":2998,"p50":0.5,"p95":2.24,"p99":22.63,"max":618.8,"failed":0,"dropped":62} CPU: app-1=71.42% redis-1=16.37% 
+{"target":4000,"achieved":4000,"p50":0.54,"p95":1.96,"p99":6.05,"max":56.7,"failed":0,"dropped":0} CPU: app-1=83.31% redis-1=18.73% 
+{"target":4000,"achieved":3998,"p50":0.58,"p95":3.88,"p99":18.1,"max":550.4,"failed":0,"dropped":60} CPU: app-1=85.56% redis-1=19.60% 
+{"target":6000,"achieved":6001,"p50":0.85,"p95":5.46,"p99":13.57,"max":95.3,"failed":0,"dropped":0} CPU: app-1=94.95% redis-1=24.47% 
+{"target":6000,"achieved":6001,"p50":0.86,"p95":5.06,"p99":18.6,"max":234.3,"failed":0,"dropped":0} CPU: app-1=95.30% redis-1=25.05% 
+{"target":7000,"achieved":6997,"p50":1.29,"p95":11.96,"p99":23.62,"max":216.4,"failed":0,"dropped":89} CPU: app-1=98.00% redis-1=28.01% 
+{"target":7000,"achieved":6998,"p50":1.17,"p95":8.18,"p99":18.72,"max":112.6,"failed":0,"dropped":47} CPU: app-1=97.57% redis-1=28.63% 
+{"target":8000,"achieved":7977,"p50":3.5,"p95":25.46,"p99":40.26,"max":454.6,"failed":0,"dropped":670} CPU: app-1=97.57% redis-1=29.18% 
+{"target":8000,"achieved":7988,"p50":3.61,"p95":20.36,"p99":32.48,"max":750.7,"failed":0,"dropped":373} CPU: app-1=97.90% redis-1=32.55% 
+== 3 replicas + nginx (started 01:13:26)
+warmup {"target":4000,"achieved":3997,"p50":0.85,"p95":2.4,"p99":18.47,"max":461.6,"failed":0,"dropped":84} CPU: app-1=51.81% app-2=52.22% app-3=52.51% nginx-1=65.50% redis-1=25.93% 
+{"target":8000,"achieved":7990,"p50":1.15,"p95":4.13,"p99":8.13,"max":152.8,"failed":0,"dropped":302} CPU: app-1=82.72% app-2=81.05% app-3=82.76% nginx-1=140.62% redis-1=52.05% 
+{"target":8000,"achieved":7991,"p50":1.14,"p95":3.73,"p99":6.52,"max":55.1,"failed":0,"dropped":286} CPU: app-1=84.66% app-2=85.21% app-3=83.80% nginx-1=143.84% redis-1=55.17% 
+{"target":10000,"achieved":9988,"p50":2.33,"p95":8.69,"p99":16.08,"max":188.4,"failed":0,"dropped":381} CPU: app-1=97.28% app-2=96.92% app-3=96.93% nginx-1=180.05% redis-1=59.76% 
+{"target":10000,"achieved":9974,"p50":2.27,"p95":10.81,"p99":28.48,"max":1038.2,"failed":0,"dropped":772} CPU: app-1=100.23% app-2=97.11% app-3=97.15% nginx-1=176.21% redis-1=61.14% 
+{"target":12000,"achieved":11954,"p50":4.96,"p95":19.86,"p99":33.5,"max":692,"failed":0,"dropped":1370} CPU: app-1=101.50% app-2=103.17% app-3=102.09% nginx-1=183.37% redis-1=67.82% 
+{"target":12000,"achieved":11925,"p50":6.05,"p95":27.55,"p99":46.65,"max":803.2,"failed":0,"dropped":2249} CPU: app-1=100.49% app-2=101.90% app-3=103.18% nginx-1=195.13% redis-1=64.11% 
+== done (started 01:17:19)

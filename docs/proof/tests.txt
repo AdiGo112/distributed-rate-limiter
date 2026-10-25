@@ -1,0 +1,42 @@
+Test run: 2026-10-26 01:34 IST, commit 389943f, Redis 7 in Docker
+
+$ npm test
+ RUN  v4.1.12 D:/ratelimiter
+ ✓ test/token-bucket.spec.ts > TokenBucket > allows a burst up to capacity then denies 2ms
+ ✓ test/token-bucket.spec.ts > TokenBucket > refills over time 0ms
+ ✓ test/token-bucket.spec.ts > TokenBucket > never exceeds capacity after long idle 0ms
+ ✓ test/token-bucket.spec.ts > TokenBucket > reports a correct retryAfter 0ms
+ ✓ test/limiter.service.spec.ts > LimiterService > maps the Lua reply and namespaces the key by plan 3ms
+ ✓ test/limiter.service.spec.ts > LimiterService > defaults to the free plan and cost 1 1ms
+ ✓ test/limiter.service.spec.ts > LimiterService > fails open by default when Redis errors 1ms
+ ✓ test/limiter.service.spec.ts > LimiterService > fails closed when FAIL_OPEN=false 0ms
+ ✓ test/limiter.service.spec.ts > LimiterService > rejects a cost above plan capacity 1ms
+ ✓ test/limiter.service.spec.ts > LimiterService metrics > counts allowed, denied and degraded decisions by plan 1ms
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+
+$ npm run test:e2e
+ RUN  v4.1.12 D:/ratelimiter
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > allows a burst up to capacity then denies with retryAfter 6ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > refills over time 86ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > sets a TTL so idle buckets expire 2ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > is atomic across app instances: 200 concurrent requests from 2 clients, capacity 100 -> exactly 100 allowed 14ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > matches the in-memory reference (capacity 10, rate 1) 622ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 200 with remaining tokens 35ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 429 with Retry-After once the burst is spent 49ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on missing key 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on empty key 3ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on key too long 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on unknown plan 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on cost 0 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on fractional cost 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on cost as string 4ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > 400 on cost above plan capacity 3ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check > GET /metrics exposes the limiter metrics in Prometheus format 9ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check with Redis down > fails open: 200, allowed, flagged degraded 13ms
+ ✓ test/check-api.e2e-spec.ts > POST /v1/check with Redis down > fails closed: 429, denied, flagged degraded, Retry-After 1 11ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > matches the in-memory reference (capacity 100, rate 20) 509ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > matches the in-memory reference (capacity 7, rate 0.3) 411ms
+ ✓ test/token-bucket-lua.e2e-spec.ts > token-bucket.lua (real Redis) > matches the in-memory reference (capacity 3, rate 13.7) 438ms
+ Test Files  2 passed (2)
+      Tests  21 passed (21)
