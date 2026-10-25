@@ -1,4 +1,8 @@
 global: { scrape_interval: 5s }
 scrape_configs:
   - job_name: ratelimiter
-    static_configs: [{ targets: ["app:3000"] }]
+    # every app replica behind the "app" DNS name, not just one of them
+    dns_sd_configs:
+      - names: ["app"]
+        type: A
+        port: 3000
