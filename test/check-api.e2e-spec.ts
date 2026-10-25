@@ -64,3 +64,50 @@ describe('POST /v1/check', () => {
     expect(res.text).toContain('rl_redis_errors_total');
   });
 });
+
+// Real connection failure (nothing listens on port 1), without stopping the
+// shared Redis that the other e2e tests use.
+describe('POST /v1/check with Redis down', () => {
+  const startApp = async (failOpen: string) => {
+    process.env.REDIS_URL = 'redis://127.0.0.1:1';
+    process.env.FAIL_OPEN = failOpen;
+    try {
+      const mod = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
+      const app = mod.createNestApplication({ logger: false });
+      await app.init();
+      return app;
+    } finally {
+      delete process.env.REDIS_URL;
+      delete process.env.FAIL_OPEN;
+    }
+  };
+
+  it('fails open: 200, allowed, flagged degraded', async () => {
+    const app = await startApp('true');
+    try {
+      const res = await request(app.getHttpServer())
+        .post('/v1/check')
+        .send({ key: 'down' })
+        .expect(200);
+      expect(res.body).toMatchObject({ allowed: true, degraded: true });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed: 429, denied, flagged degraded, Retry-After 1', async () => {
+    const app = await startApp('false');
+    try {
+      const res = await request(app.getHttpServer())
+        .post('/v1/check')
+        .send({ key: 'down' })
+        .expect(429);
+      expect(res.body).toMatchObject({ allowed: false, degraded: true });
+      expect(res.headers['retry-after']).toBe('1');
+    } finally {
+      await app.close();
+    }
+  });
+});
