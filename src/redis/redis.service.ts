@@ -10,6 +10,7 @@ declare module 'ioredis' {
       capacity: number,
       rate: number,
       cost: number,
+      nowMs?: number, // tests only; production uses Redis TIME
     ): Promise<[allowed: number, tokens: string, retryAfterMs: number]>;
   }
 }

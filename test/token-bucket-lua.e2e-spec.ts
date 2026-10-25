@@ -1,5 +1,7 @@
 import { RedisService } from '../src/redis/redis.service.js';
 import { once } from 'node:events';
+import { TokenBucket } from '../src/limiter/core/token-bucket.js';
+import { FakeClock } from '../src/limiter/core/clock.js';
 
 // Needs a real Redis: docker run -d --rm -p 6379:6379 redis:7-alpine
 describe('token-bucket.lua (real Redis)', () => {
@@ -56,4 +58,54 @@ describe('token-bucket.lua (real Redis)', () => {
     );
     expect(results.filter(([allowed]) => allowed === 1)).toHaveLength(100);
   });
+
+  // Same random (gap, cost) sequence through both implementations, on the same
+  // simulated clock: every decision must match the in-memory reference exactly.
+  it.each([
+    { capacity: 10, rate: 1 },
+    { capacity: 100, rate: 20 },
+    { capacity: 7, rate: 0.3 },
+    { capacity: 3, rate: 13.7 },
+  ])(
+    'matches the in-memory reference (capacity $capacity, rate $rate)',
+    async ({ capacity, rate }) => {
+      const rand = mulberry32(capacity * 1000 + rate * 10); // seeded: failures are reproducible
+      const clock = new FakeClock(1_000_000);
+      const ref = new TokenBucket(capacity, rate, clock);
+      const k = key(`parity-${capacity}-${rate}`);
+
+      for (let step = 0; step < 1000; step++) {
+        // mostly short gaps (bucket drains), sometimes long ones (refills to the cap)
+        clock.advance(
+          rand() < 0.9 ? Math.floor(rand() * 300) : Math.floor(rand() * 20_000),
+        );
+        const cost = 1 + Math.floor(rand() * Math.min(capacity, 5));
+
+        const expected = ref.tryConsume(cost);
+        const [allowed, tokens, retryAfterMs] = await redis.client.tokenBucket(
+          k,
+          capacity,
+          rate,
+          cost,
+          clock.nowMs(),
+        );
+        const actual = {
+          allowed: allowed === 1,
+          remaining: Math.floor(Number(tokens)),
+          retryAfterMs,
+        };
+        expect(actual, `step ${step}, cost ${cost}`).toEqual(expected);
+      }
+    },
+  );
 });
+
+// tiny seeded PRNG so the parity sequence is the same on every run
+function mulberry32(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
