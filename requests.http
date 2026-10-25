@@ -1,0 +1,17 @@
+### Allowed (free plan: 10 burst, 1/sec). Send it 11 times fast to see a 429.
+POST http://localhost:3000/v1/check
+Content-Type: application/json
+
+{ "key": "user-42", "plan": "free", "cost": 1 }
+
+### Pro plan
+POST http://localhost:3000/v1/check
+Content-Type: application/json
+
+{ "key": "user-42", "plan": "pro", "cost": 5 }
+
+### 400: cost above plan capacity
+POST http://localhost:3000/v1/check
+Content-Type: application/json
+
+{ "key": "user-42", "plan": "free", "cost": 11 }
