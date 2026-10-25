@@ -29,7 +29,19 @@ services:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ["3001:3000"]
-    depends_on: [prometheus]
+    depends_on: [prometheus, loki]
+
+  loki:
+    image: grafana/loki:3.5.0 # default config: single process, stores on local disk
+    ports: ["3100:3100"]
+
+  alloy:
+    image: grafana/alloy:v1.10.0
+    command: run /etc/alloy/config.alloy
+    volumes:
+      - ./docker/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro # read container logs
+    depends_on: [loki]
 
   # traffic for the graphs: docker compose run --rm k6
   k6:
